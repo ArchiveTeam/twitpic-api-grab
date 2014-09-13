@@ -150,7 +150,7 @@ USER_AGENTS = [
     'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:31.0) Gecko/20100101 Firefox/31.0',
     'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:32.0) Gecko/20100101 Firefox/32.0',
 ]
-TRACKER_ID = 'twitpic'
+TRACKER_ID = 'twitpic-api'
 TRACKER_HOST = 'tracker.archiveteam.org'
 
 ACCEPT_LANGUAGE_HEADERS = [
@@ -245,7 +245,7 @@ def get_hash(filename):
 
 CWD = os.getcwd()
 PIPELINE_SHA1 = get_hash(os.path.join(CWD, 'pipeline.py'))
-LUA_SHA1 = get_hash(os.path.join(CWD, 'twitpic.lua'))
+LUA_SHA1 = get_hash(os.path.join(CWD, 'twitpic-api.lua'))
 
 
 def stats_id_function(item):
@@ -265,7 +265,7 @@ class WgetArgs(object):
             WGET_LUA,
             "-U", random.choice(USER_AGENTS),
             "-nv",
-            "--lua-script", "twitpic.lua",
+            "--lua-script", "twitpic-api.lua",
             "-o", ItemInterpolation("%(item_dir)s/wget.log"),
             "--no-check-certificate",
             "--output-document", ItemInterpolation("%(item_dir)s/wget.tmp"),
@@ -273,7 +273,6 @@ class WgetArgs(object):
             "-e", "robots=off",
             "--no-cookies",
             "--rotate-dns",
-            # Do download recursive, we're checking the urls in twitpic.lua
             "--recursive", "--level=inf",
             "--no-parent",
             "--page-requisites",
@@ -284,8 +283,8 @@ class WgetArgs(object):
             "--domains", "twitpic.com,cloudfront.net,twimg.com,amazonaws.com",
             "--warc-file", ItemInterpolation("%(item_dir)s/%(warc_file_base)s"),
             "--warc-header", "operator: Archive Team",
-            "--warc-header", "twitpic-dld-script-version: " + VERSION,
-            "--warc-header", ItemInterpolation("twitpic-user: %(item_name)s"),
+            "--warc-header", "twitpic-api-dld-script-version: " + VERSION,
+            "--warc-header", ItemInterpolation("twitpic-api-user: %(item_name)s"),
             "--header", "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
             "--header", "DNT: 1",
             "--header", random.choice(ACCEPT_LANGUAGE_HEADERS),
@@ -300,36 +299,14 @@ class WgetArgs(object):
         
         assert item_type in ('image', 'user', 'tag', 'event')
         
-        if item_type == 'image':
+        if item_type == 'imageapi':
             suffixes = string.digits + string.lowercase
 
-            for args in [('http://twitpic.com/{0}{1}'.format(item_value, s), \
-                          'http://twitpic.com/show/thumb/{0}{1}'.format(item_value, s), \
-                          'http://twitpic.com/show/large/{0}{1}'.format(item_value, s), \
+            for args in [(
                           'http://api.twitpic.com/2/media/show.json?id={0}{1}'.format(item_value, s), \
-                          'http://api.twitpic.com/2/comments/show.json?media_id={0}{1}&page=1'.format(item_value, s), \
-                          'http://twitpic.com/show/mini/{0}{1}'.format(item_value, s)) for s in suffixes]:
+                          'http://api.twitpic.com/2/comments/show.json?media_id={0}{1}&page=1'.format(item_value, s)) for s in suffixes]:
                 wget_args.append(args[0])
                 wget_args.append(args[1])
-                wget_args.append(args[2])
-                wget_args.append(args[3])
-                wget_args.append(args[4])
-                wget_args.append(args[5])
-
-        elif item_type == 'user':
-            wget_args.append('http://twitpic.com/photos/{0}'.format(item_value))
-            wget_args.append('http://twitpic.com/events/{0}'.format(item_value))
-            wget_args.append('http://twitpic.com/places/{0}'.format(item_value))
-            wget_args.append('http://twitpic.com/faces/{0}'.format(item_value))
-            wget_args.append('http://api.twitpic.com/2/users/show.json?username={0}'.format(item_value))
-            wget_args.append('http://api.twitpic.com/2/places/show.json?user={0}'.format(item_value))
-            wget_args.append('http://api.twitpic.com/2/events/show.json?user={0}'.format(item_value))
-        elif item_type == 'tag':
-            wget_args.append('http://twitpic.com/tag/{0}'.format(item_value))
-            wget_args.append('http://api.twitpic.com/2/tags/show.json?tag={0}'.format(item_value))
-            wget_args.append('http://twitpic.com/tag/{0}.json'.format(item_value))
-        elif item_type == 'event':
-            wget_args.append('http://api.twitpic.com/2/event/show.json?id={0}'.format(item_value))
         else:
             raise Exception('Unknown item')
         
@@ -348,11 +325,11 @@ class WgetArgs(object):
 # This will be shown in the warrior management panel. The logo should not
 # be too big. The deadline is optional.
 project = Project(
-    title="Twitpic",
+    title="Twitpic Api",
     project_html="""
         <img class="project-logo" alt="Project logo" src="http://archiveteam.org/images/6/68/Twitpic-logo.png" height="50px" title=""/>
-        <h2>twitpic.com <span class="links"><a href="http://twitpic.com/">Website</a> &middot; <a href="http://tracker.archiveteam.org/twitpic/">Leaderboard</a></span></h2>
-        <p>Archiving images and webpages from twitpic.com.</p>
+        <h2>api.twitpic.com <span class="links"><a href="http://api.twitpic.com/">Website</a> &middot; <a href="http://tracker.archiveteam.org/twitpic-api/">Leaderboard</a></span></h2>
+        <p>Archiving api pages from api.twitpic.com.</p>
     """,
     utc_deadline=datetime.datetime(2014, 9, 25, 23, 59, 0)
 )
@@ -361,7 +338,7 @@ pipeline = Pipeline(
     CheckIP(),
     GetItemFromTracker("http://%s/%s" % (TRACKER_HOST, TRACKER_ID), downloader,
         VERSION),
-    PrepareDirectories(warc_prefix="twitpic"),
+    PrepareDirectories(warc_prefix="twitpic-api"),
     WgetDownload(
         WgetArgs(),
         max_tries=2,
