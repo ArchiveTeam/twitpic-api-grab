@@ -4,7 +4,6 @@ local item_type = os.getenv('item_type')
 local item_value = os.getenv('item_value')
 dofile("urlcode.lua")
 dofile("table_show.lua")
-dofile("failure_report.lua")
 JSON = (loadfile "JSON.lua")()
 
 load_json_file = function(file)
